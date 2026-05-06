@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  vinasim_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vinasim_app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./vinasim:/var/www/html
+    depends_on:
+      - vinasim_db
+    networks:
+      - vinasim_network
+    command: >
+      sh -c "
+      chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache &&
+      chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache &&
+      apache2-foreground
+      "
+
+  vinasim_db:
+    image: mysql:8.0
+    container_name: vinasim_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: vinasim
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: 123456
+    ports:
+      - "3306:3306"
+    volumes:
+      - vinasim_dbdata:/var/lib/mysql
+    networks:
+      - vinasim_network
+
+  vinasim_composer:
+    image: composer:latest
+    container_name: vinasim_composer
+    working_dir: /app
+    volumes:
+      - ./vinasim:/app
+    networks:
+      - vinasim_network
+
+networks:
+  vinasim_network:
+
+volumes:
+  vinasim_dbdata:

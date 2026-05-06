@@ -1,0 +1,48 @@
+FROM php:8.4-apache
+
+# Install system packages
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    zip \
+    unzip \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev
+
+# Install PHP extensions
+RUN docker-php-ext-install \
+    pdo_mysql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    zip
+
+# Enable Apache rewrite
+RUN a2enmod rewrite
+
+# Set Laravel public as document root
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+
+# Update Apache config
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
+    /etc/apache2/sites-available/*.conf \
+ && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' \
+    /etc/apache2/apache2.conf \
+    /etc/apache2/conf-available/*.conf
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+# Fix permission (dev mode)
+RUN chown -R www-data:www-data /var/www/html
+
+RUN mkdir -p /var/www/tmp \
+    && chmod -R 777 /var/www/tmp
+
+RUN echo "sys_temp_dir=/var/www/tmp" > /usr/local/etc/php/conf.d/tempdir.ini
